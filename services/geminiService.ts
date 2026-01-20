@@ -1,17 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { Client } from '../types';
 
-// Safely access process.env.API_KEY or default to undefined
-const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
+// In Vite, process.env is replaced at build time. 
+// If API_KEY is missing, this is undefined.
+// We strictly handle this to prevent crashes.
+const apiKey = typeof process !== 'undefined' && process.env && process.env.API_KEY ? process.env.API_KEY : undefined;
 
 let ai: GoogleGenAI | null = null;
 
-// Only initialize AI if key exists. Otherwise app runs in "Offline/Manual" mode.
 if (apiKey) {
   try {
     ai = new GoogleGenAI({ apiKey });
   } catch (e) {
-    console.warn("Failed to initialize AI client, falling back to offline mode.");
+    console.warn("Offline Mode: AI client not initialized.");
   }
 }
 
@@ -88,41 +89,38 @@ Best regards,
 };
 
 export const generateOutreachEmail = async (client: Client, context: string): Promise<string> => {
-  // 1. Try AI First if available
-  if (ai) {
-    try {
-      const model = 'gemini-3-flash-preview';
-      const prompt = `
-        You are a professional assistant for a VFX/Animation freelancer.
-        Write a polite, professional, and concise email to a client.
-
-        Client Name: ${client.name}
-        Company: ${client.company}
-        Role: ${client.role}
-        Sector: ${client.sector}
-        Last Contact: ${client.lastContactDate ? new Date(client.lastContactDate).toDateString() : 'Never'}
-        Client Notes: ${client.notes}
-
-        Goal of email: ${context}
-
-        Tone: Professional, creative, warm, but concise.
-        Do not include subject line placeholders, just give me the subject and the body.
-      `;
-
-      const response = await ai.models.generateContent({
-        model: model,
-        contents: prompt,
-      });
-
-      return response.text || getOfflineTemplate(client, context);
-    } catch (error) {
-      console.warn("Gemini API Error (falling back to offline template):", error);
-      // Fallback silently to offline template so the app always works
-      return getOfflineTemplate(client, context);
-    }
+  // If no AI, return template immediately.
+  if (!ai) {
+    return getOfflineTemplate(client, context);
   }
 
-  // 2. Fallback to Offline Template immediately if no API key (Offline Mode)
-  // This ensures the app works "independently" as requested.
-  return getOfflineTemplate(client, context);
+  try {
+    const model = 'gemini-3-flash-preview';
+    const prompt = `
+      You are a professional assistant for a VFX/Animation freelancer.
+      Write a polite, professional, and concise email to a client.
+
+      Client Name: ${client.name}
+      Company: ${client.company}
+      Role: ${client.role}
+      Sector: ${client.sector}
+      Last Contact: ${client.lastContactDate ? new Date(client.lastContactDate).toDateString() : 'Never'}
+      Client Notes: ${client.notes}
+
+      Goal of email: ${context}
+
+      Tone: Professional, creative, warm, but concise.
+      Do not include subject line placeholders, just give me the subject and the body.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: prompt,
+    });
+
+    return response.text || getOfflineTemplate(client, context);
+  } catch (error) {
+    // Silent fallback
+    return getOfflineTemplate(client, context);
+  }
 };
