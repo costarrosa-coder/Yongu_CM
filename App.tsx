@@ -123,8 +123,11 @@ const App = () => {
     }
 
     const handleInstallPrompt = (e: any) => {
+      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
+      // Stash the event so it can be triggered later.
       setInstallPrompt(e);
+      console.log("Install prompt captured");
     };
 
     window.addEventListener('beforeinstallprompt', handleInstallPrompt);
@@ -135,6 +138,11 @@ const App = () => {
     if (!installPrompt) return;
     installPrompt.prompt();
     installPrompt.userChoice.then((choiceResult: any) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
       setInstallPrompt(null);
     });
   };
@@ -428,6 +436,18 @@ const App = () => {
         </div>
 
         <nav className="flex-1 px-4 space-y-2 mt-4">
+          
+          {/* Install App Banner for Desktop */}
+          {installPrompt && (
+            <button 
+              onClick={handleInstallClick} 
+              className="w-full flex items-center justify-center gap-3 p-3 mb-4 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 rounded-xl transition-all shadow-lg shadow-indigo-500/30 animate-pulse"
+            >
+              <Download size={18} /> 
+              <span className="hidden lg:block">Install App</span>
+            </button>
+          )}
+
           <button onClick={() => setView('DASHBOARD')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === 'DASHBOARD' ? 'bg-indigo-600/10 text-indigo-400' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}>
             <LayoutDashboard size={20} /> <span className="hidden lg:block font-medium">{t.dashboard}</span>
           </button>
@@ -446,13 +466,7 @@ const App = () => {
         </nav>
 
         <div className="p-4 border-t border-slate-800 space-y-4">
-           {/* Install App Button */}
-           {installPrompt && (
-              <button onClick={handleInstallClick} className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-slate-900 bg-indigo-500 hover:bg-indigo-400 rounded-lg transition-colors shadow-lg shadow-indigo-500/20 animate-pulse">
-                <Download size={14} /> Install App
-              </button>
-           )}
-
+           
            <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-800">
               <button onClick={() => setLang('en')} className={`flex-1 py-1.5 text-xs font-medium rounded ${lang === 'en' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>EN</button>
               <button onClick={() => setLang('es')} className={`flex-1 py-1.5 text-xs font-medium rounded ${lang === 'es' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>ES</button>
